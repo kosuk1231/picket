@@ -43,28 +43,51 @@ const PROMPT = `[작업] 두 이미지를 자연스럽게 합성해주세요.
 
 결과물은 위 조건을 모두 만족하는 합성된 이미지 1장입니다.`;
 
-// 시도할 엔드포인트 후보들 (순서대로 시도, 첫 성공한 것 사용)
-function getEndpointCandidates(projectId, location, model) {
-  const candidates = [];
-
-  // 1. global location (가장 권장됨, 가용성 높음)
-  if (location === 'global') {
-    candidates.push({
-      url: `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/${model}:generateContent`,
-      label: 'global',
-    });
-    // global fallback: us-central1
-    candidates.push({
-      url: `https://us-central1-aiplatform.googleapis.com/v1/projects/${projectId}/locations/us-central1/publishers/google/models/${model}:generateContent`,
-      label: 'us-central1 (fallback)',
-    });
-  } else {
-    candidates.push({
-      url: `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`,
-      label: location,
-    });
+/**
+ * 모델/리전 조합 후보를 모두 만든다
+ * Gemini 2.5 Flash Image 모델은 다음 ID로 시도 가능:
+ * - gemini-2.5-flash-image (정식)
+ * - gemini-2.5-flash-image-preview (이전 미리보기명, 호환성 유지)
+ *
+ * 리전:
+ * - global (가장 권장)
+ * - us-central1 (대부분 모델 사용 가능)
+ */
+function getEndpointCandidates(projectId, envLocation, envModel) {
+  const models = [];
+  // 사용자 지정 모델 우선 시도
+  if (envModel && envModel !== 'gemini-2.5-flash-image') {
+    models.push(envModel);
   }
+  // 기본 후보들
+  models.push('gemini-2.5-flash-image');
+  models.push('gemini-2.5-flash-image-preview');
 
+  const locations = [];
+  if (envLocation && envLocation !== 'global') {
+    locations.push(envLocation);
+  }
+  locations.push('global');
+  locations.push('us-central1');
+
+  // 중복 제거
+  const uniqModels = [...new Set(models)];
+  const uniqLocations = [...new Set(locations)];
+
+  const candidates = [];
+  for (const model of uniqModels) {
+    for (const location of uniqLocations) {
+      const host = location === 'global'
+        ? 'aiplatform.googleapis.com'
+        : `${location}-aiplatform.googleapis.com`;
+      candidates.push({
+        url: `https://${host}/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`,
+        label: `${model} @ ${location}`,
+        model,
+        location,
+      });
+    }
+  }
   return candidates;
 }
 
@@ -83,8 +106,8 @@ export default async function handler(req, res) {
     }
 
     const projectId = process.env.GCP_PROJECT_ID;
-    const location = process.env.GCP_LOCATION || 'global';
-    const model = process.env.GCP_MODEL || 'gemini-2.5-flash-image';
+    const envLocation = process.env.GCP_LOCATION || 'global';
+    const envModel = process.env.GCP_MODEL || 'gemini-2.5-flash-image';
 
     if (!projectId) {
       return res.status(500).json({ error: 'GCP_PROJECT_ID 환경변수가 설정되지 않았습니다.' });
@@ -126,13 +149,12 @@ export default async function handler(req, res) {
       },
     };
 
-    // 여러 엔드포인트 후보를 순차 시도
-    const candidates = getEndpointCandidates(projectId, location, model);
+    const candidates = getEndpointCandidates(projectId, envLocation, envModel);
     const errors = [];
 
     for (const candidate of candidates) {
       try {
-        console.log(`Trying endpoint: ${candidate.label}`);
+        console.log(`Trying: ${candidate.label}`);
 
         const vertexResponse = await fetch(candidate.url, {
           method: 'POST',
@@ -153,6 +175,7 @@ export default async function handler(req, res) {
               const inline = part.inlineData || part.inline_data;
               if (inline?.data) {
                 const mimeType = inline.mimeType || inline.mime_type || 'image/png';
+                console.log(`Success: ${candidate.label}`);
                 return res.status(200).json({
                   image: `data:${mimeType};base64,${inline.data}`,
                 });
@@ -160,22 +183,23 @@ export default async function handler(req, res) {
             }
           }
 
-          // 응답은 왔는데 이미지가 없음 (안전 필터 등)
+          // 응답은 왔는데 이미지가 없음
+          const finishReason = candidatesResult[0]?.finishReason || 'unknown';
           return res.status(500).json({
-            error: 'AI가 이미지를 생성하지 못했습니다. 다른 사진으로 다시 시도해주세요.',
-            debug: `Response had no image. finishReason: ${candidatesResult[0]?.finishReason || 'unknown'}`,
+            error: `AI가 이미지를 생성하지 못했습니다 (사유: ${finishReason}). 다른 사진으로 다시 시도해주세요.`,
+            debug: { finishReason, candidate: candidate.label },
           });
         } else {
-          // 실패 — 다음 후보 시도
           const errorText = await vertexResponse.text();
           errors.push({
             endpoint: candidate.label,
             status: vertexResponse.status,
-            body: errorText.slice(0, 300),
+            body: errorText.slice(0, 500),
           });
 
-          // 404가 아닌 다른 에러(401, 403 등)는 후보 바꿔도 같은 결과라 바로 중단
-          if (vertexResponse.status !== 404) {
+          // 404 외 다른 에러는 후보를 바꿔도 동일할 가능성이 높음
+          // 단, 503/429는 다른 리전으로 fallback할 가치가 있음
+          if (vertexResponse.status !== 404 && vertexResponse.status !== 503 && vertexResponse.status !== 429) {
             break;
           }
         }
@@ -191,11 +215,13 @@ export default async function handler(req, res) {
     const firstError = errors[0];
     let userMsg = `Vertex AI 호출 실패`;
     if (firstError?.status === 404) {
-      userMsg = `모델을 찾을 수 없습니다. 프로젝트 ID(${projectId})와 모델명(${model})을 확인하세요.`;
+      userMsg = `Gemini 이미지 모델에 접근할 수 없습니다.\n프로젝트(${projectId})에서 Vertex AI / Gemini 2.5 Flash Image 모델 접근 권한을 확인해주세요.`;
     } else if (firstError?.status === 403) {
-      userMsg = `권한이 부족합니다. 서비스 계정에 "Vertex AI 사용자" 권한이 있는지 확인하세요.`;
+      userMsg = `권한이 부족합니다. 서비스 계정에 "Vertex AI 사용자" 또는 "Agent Platform 사용자" 권한이 있는지 확인하세요.`;
     } else if (firstError?.status === 401) {
       userMsg = `인증 실패. 서비스 계정 키가 올바른지 확인하세요.`;
+    } else if (firstError?.status === 429) {
+      userMsg = `요청이 너무 많습니다. 잠시 후 다시 시도해주세요.`;
     }
 
     return res.status(firstError?.status || 500).json({
