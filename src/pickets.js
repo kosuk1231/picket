@@ -12,7 +12,7 @@ export const PICKETS = [
   { id: 10, file: '/pickets/picket-10.png', title: '나, 사회복지사는 서울시 조례시설 등의 동일한 복지업무, 동일한 처우개선을 위해 함께합니다' },
 ];
 
-// 모든 인증샷에 공통으로 들어가는 캠페인 해시태그 (5개 고정)
+// 공통 캠페인 해시태그 (5개 고정)
 export const HASHTAGS = [
   '#서사협_공정위원회',
   '#동일한복지업무동일한경력인정',
@@ -21,20 +21,40 @@ export const HASHTAGS = [
   '#지속가능한서울복지',
 ];
 
+// 지목 이름 placeholder (입력 안 한 경우 기본값)
+export const DEFAULT_TAGS = ['___', '___', '___'];
+
 /**
- * SNS 게시용 텍스트 생성
- * 선택한 피켓의 메시지 + 공통 해시태그 5개
+ * 릴레이 캠페인 SNS 게시용 문구 생성
+ *
+ * @param {number} picketId - 선택한 피켓 ID
+ * @param {string[]} nominees - 지목할 사람 이름 3개 (선택)
+ * @returns {string} 완성된 게시용 문구
  */
-export function buildHashtagText(picketId) {
+export function buildHashtagText(picketId, nominees = []) {
   const picket = PICKETS.find(p => p.id === picketId);
   if (!picket) return '';
 
-  const intro = `"${picket.title}"
-
-서울특별시사회복지사협회 공정위원회와 함께
-사회복지사 처우개선과 공정한 경력인정을 응원합니다.`;
+  // 지목 이름 3개 채우기 (입력 안 된 자리는 ___로)
+  const names = [0, 1, 2].map(i => {
+    const name = (nominees[i] || '').trim();
+    return name || DEFAULT_TAGS[i];
+  });
+  const mentionLine = names.map(n => `@${n}`).join(' ');
 
   const tagLine = HASHTAGS.join(' ');
 
-  return `${intro}\n\n${tagLine}`;
+  return `서울특별시사회복지사협회 공정위원회의 온라인 이슈 파이팅 릴레이에 함께합니다.
+
+시설 이름은 다를 수 있지만, 시민을 만나고 지원하는 복지업무의 가치는 다르지 않습니다.
+
+저는 오늘 아래 문구에 함께합니다.
+"${picket.title}"
+
+같은 복지업무에는 공정한 경력인정이 필요합니다. 사회복지사의 안정이 시민의 복지서비스 안정으로 이어집니다.
+현장의 목소리를 함께 확산해주세요.
+
+저는 다음으로 ${mentionLine} 님을 지목합니다. 바쁘시더라도 함께해주시면 감사하겠습니다.
+
+${tagLine}`;
 }

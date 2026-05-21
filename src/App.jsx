@@ -19,6 +19,9 @@ export default function App() {
   const [toast, setToast] = useState('');
   const [hashtagCopied, setHashtagCopied] = useState(false);
 
+  // 지목할 사람 3명 (릴레이용)
+  const [nominees, setNominees] = useState(['', '', '']);
+
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -91,11 +94,11 @@ export default function App() {
   }
 
   async function handleCopyHashtag() {
-    const text = buildHashtagText(selectedPicket);
+    const text = buildHashtagText(selectedPicket, nominees);
     try {
       await navigator.clipboard.writeText(text);
       setHashtagCopied(true);
-      setToast('해시태그를 복사했습니다');
+      setToast('게시용 문구를 복사했습니다');
       setTimeout(() => setHashtagCopied(false), 2000);
     } catch {
       setError('클립보드 복사에 실패했습니다. 직접 선택해서 복사해주세요.');
@@ -104,7 +107,7 @@ export default function App() {
 
   async function handleShare() {
     if (!resultImage) return;
-    const text = buildHashtagText(selectedPicket);
+    const text = buildHashtagText(selectedPicket, nominees);
 
     try {
       const blob = await (await fetch(resultImage)).blob();
@@ -255,18 +258,46 @@ export default function App() {
               </div>
 
               {picketMeta && (
-                <div className="hashtag-box">
-                  <button
-                    className={`hashtag-copy ${hashtagCopied ? 'copied' : ''}`}
-                    onClick={handleCopyHashtag}
-                  >
-                    {hashtagCopied ? '✓ 복사됨' : '📋 복사'}
-                  </button>
-                  <div className="hashtag-box-label">📌 SNS 게시용 문구</div>
-                  <div className="hashtag-text" style={{ whiteSpace: 'pre-wrap' }}>
-                    {buildHashtagText(selectedPicket)}
+                <>
+                  <div className="nominee-box">
+                    <div className="nominee-box-label">🙋 다음 릴레이로 지목할 분</div>
+                    <p className="nominee-help">
+                      세 분의 이름을 입력하시면 아래 게시용 문구에 자동으로 들어갑니다. (선택)
+                    </p>
+                    <div className="nominee-inputs">
+                      {[0, 1, 2].map(i => (
+                        <div key={i} className="nominee-input-wrap">
+                          <span className="nominee-at">@</span>
+                          <input
+                            type="text"
+                            className="nominee-input"
+                            placeholder={`이름 ${i + 1}`}
+                            value={nominees[i]}
+                            onChange={e => {
+                              const next = [...nominees];
+                              next[i] = e.target.value;
+                              setNominees(next);
+                            }}
+                            maxLength={20}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+
+                  <div className="hashtag-box">
+                    <button
+                      className={`hashtag-copy ${hashtagCopied ? 'copied' : ''}`}
+                      onClick={handleCopyHashtag}
+                    >
+                      {hashtagCopied ? '✓ 복사됨' : '📋 복사'}
+                    </button>
+                    <div className="hashtag-box-label">📌 SNS 게시용 문구</div>
+                    <div className="hashtag-text" style={{ whiteSpace: 'pre-wrap' }}>
+                      {buildHashtagText(selectedPicket, nominees)}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           )}
