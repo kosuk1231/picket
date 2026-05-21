@@ -257,8 +257,13 @@ img { max-width: 100%; display: block; }
   gap: 10px;
 }
 
+.picket-card-wrap {
+  position: relative;
+}
+
 .picket-card {
   position: relative;
+  width: 100%;
   aspect-ratio: 4/3;
   border-radius: 10px;
   overflow: hidden;
@@ -266,6 +271,130 @@ img { max-width: 100%; display: block; }
   background: white;
   transition: all 0.15s;
   padding: 0;
+  display: block;
+}
+
+.picket-zoom-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(26, 46, 74, 0.85);
+  color: white;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  transition: all 0.15s;
+  z-index: 2;
+  backdrop-filter: blur(4px);
+}
+
+.picket-zoom-btn:hover {
+  background: var(--navy);
+  transform: scale(1.1);
+}
+
+.picket-card-wrap:has(.picket-card.selected) .picket-zoom-btn {
+  /* 선택된 카드에서는 우상단에 체크 아이콘이 있으므로 돋보기는 왼쪽 위로 */
+  right: auto;
+  left: 4px;
+}
+
+/* === Picket Preview Modal === */
+.picket-preview-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.picket-preview-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(26, 46, 74, 0.08);
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: all 0.15s;
+  border: none;
+  padding: 0;
+}
+
+.picket-preview-close:hover {
+  background: var(--navy);
+  color: white;
+}
+
+.picket-preview-image {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.picket-preview-info {
+  padding: 0 4px;
+}
+
+.picket-preview-number {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--teal);
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.picket-preview-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.picket-preview-select {
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--orange);
+  color: white;
+  border: none;
+  transition: all 0.15s;
+}
+
+.picket-preview-select:hover {
+  background: #D14530;
+}
+
+.picket-preview-select.selected {
+  background: var(--teal);
+}
+
+.picket-preview-select.selected:hover {
+  background: var(--teal-dark);
 }
 
 .picket-card img {

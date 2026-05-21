@@ -22,6 +22,9 @@ export default function App() {
   // 지목할 사람 3명 (릴레이용)
   const [nominees, setNominees] = useState(['', '', '']);
 
+  // 피켓 크게 보기 모달
+  const [previewPicketId, setPreviewPicketId] = useState(null);
+
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -164,7 +167,10 @@ export default function App() {
         {/* Step 1 */}
         <section className="section">
           <h2 className="section-title">1. 본인 사진 선택</h2>
-          <p className="section-sub">상반신이 잘 보이는 정면 사진이 가장 자연스럽게 합성됩니다.</p>
+          <p className="section-sub">
+            혼자 정면으로 찍은 상반신 사진이 가장 자연스럽게 합성됩니다.<br />
+            여러 명이 함께 찍힌 사진은 결과가 일정하지 않을 수 있어요.
+          </p>
 
           <div className={`photo-area ${userPhotoPreview ? 'has-photo' : ''}`}>
             {userPhotoPreview ? (
@@ -212,15 +218,26 @@ export default function App() {
 
           <div className="picket-grid">
             {PICKETS.map(picket => (
-              <button
-                key={picket.id}
-                className={`picket-card ${selectedPicket === picket.id ? 'selected' : ''}`}
-                onClick={() => setSelectedPicket(picket.id)}
-                aria-label={picket.title}
-              >
-                <img src={picket.file} alt={picket.title} loading="lazy" />
-                <span className="picket-card-number">{picket.id}</span>
-              </button>
+              <div key={picket.id} className="picket-card-wrap">
+                <button
+                  className={`picket-card ${selectedPicket === picket.id ? 'selected' : ''}`}
+                  onClick={() => setSelectedPicket(picket.id)}
+                  aria-label={`피켓 선택: ${picket.title}`}
+                >
+                  <img src={picket.file} alt={picket.title} loading="lazy" />
+                  <span className="picket-card-number">{picket.id}</span>
+                </button>
+                <button
+                  className="picket-zoom-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewPicketId(picket.id);
+                  }}
+                  aria-label={`피켓 크게 보기: ${picket.title}`}
+                >
+                  🔍
+                </button>
+              </div>
             ))}
           </div>
         </section>
@@ -314,6 +331,50 @@ export default function App() {
           <div className="loading-spinner" />
           <div className="loading-text">AI가 합성 중입니다</div>
           <div className="loading-sub">약 10~20초 정도 소요됩니다</div>
+        </div>
+      )}
+
+      {/* Picket Preview Modal */}
+      {previewPicketId !== null && (
+        <div
+          className="modal-overlay"
+          onClick={() => setPreviewPicketId(null)}
+        >
+          <div
+            className="picket-preview-modal"
+            onClick={e => e.stopPropagation()}
+          >
+            {(() => {
+              const p = PICKETS.find(x => x.id === previewPicketId);
+              if (!p) return null;
+              const isSelected = selectedPicket === p.id;
+              return (
+                <>
+                  <button
+                    className="picket-preview-close"
+                    onClick={() => setPreviewPicketId(null)}
+                    aria-label="닫기"
+                  >
+                    ✕
+                  </button>
+                  <img src={p.file} alt={p.title} className="picket-preview-image" />
+                  <div className="picket-preview-info">
+                    <div className="picket-preview-number">손피켓 {p.id}</div>
+                    <div className="picket-preview-title">{p.title}</div>
+                  </div>
+                  <button
+                    className={`picket-preview-select ${isSelected ? 'selected' : ''}`}
+                    onClick={() => {
+                      setSelectedPicket(p.id);
+                      setPreviewPicketId(null);
+                    }}
+                  >
+                    {isSelected ? '✓ 선택됨' : '이 피켓 선택하기'}
+                  </button>
+                </>
+              );
+            })()}
+          </div>
         </div>
       )}
 
