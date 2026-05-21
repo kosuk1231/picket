@@ -9,6 +9,7 @@ export const PICKETS = [
   { id: 7, file: '/pickets/picket-7.png', title: '서울시가 위탁한 복지업무에는 책임도 함께' },
   { id: 8, file: '/pickets/picket-8.png', title: '경력은 온전히, 복리후생은 차별 없이' },
   { id: 9, file: '/pickets/picket-9.png', title: '조례시설이라는 이름으로 경력을 낮게 인정해서는 안 됩니다' },
+  { id: 10, file: '/pickets/picket-10.png', title: '나, 사회복지사는 서울시 조례시설 등의 동일한 복지업무, 동일한 처우개선을 위해 함께합니다' },
 ];
 
 // 모든 인증샷에 공통으로 들어가는 캠페인 해시태그 (5개 고정)
