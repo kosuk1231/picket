@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { PICKETS, buildHashtagText } from './pickets';
 import { fileToBase64, urlToBase64, generatePicketPhoto } from './gemini';
+import { detectInAppBrowser, openInExternalBrowser } from './inAppBrowser';
 
 export default function App() {
   // User photo
@@ -25,8 +26,18 @@ export default function App() {
   // 피켓 크게 보기 모달
   const [previewPicketId, setPreviewPicketId] = useState(null);
 
+  // 인앱 브라우저 감지
+  const [inAppBrowser, setInAppBrowser] = useState(null);
+  const [inAppBannerDismissed, setInAppBannerDismissed] = useState(false);
+
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // 인앱 브라우저 감지 (마운트 시 1회)
+  useEffect(() => {
+    const detected = detectInAppBrowser();
+    if (detected) setInAppBrowser(detected);
+  }, []);
 
   // Toast auto-dismiss
   useEffect(() => {
@@ -147,6 +158,36 @@ export default function App() {
       </header>
 
       <main className="main">
+        {/* 인앱 브라우저 안내 배너 */}
+        {inAppBrowser && !inAppBannerDismissed && (
+          <div className="inapp-banner">
+            <div className="inapp-banner-icon">⚠️</div>
+            <div className="inapp-banner-body">
+              <div className="inapp-banner-title">
+                지금 {inAppBrowser.name} 안에서 보고 계세요
+              </div>
+              <div className="inapp-banner-text">
+                카메라나 사진 업로드가 작동하지 않을 수 있어요.<br />
+                <strong>Chrome, Safari 같은 기본 브라우저로 여는 것을 추천드립니다.</strong>
+              </div>
+              <div className="inapp-banner-actions">
+                <button
+                  className="inapp-banner-btn primary"
+                  onClick={openInExternalBrowser}
+                >
+                  🌐 기본 브라우저로 열기
+                </button>
+                <button
+                  className="inapp-banner-btn"
+                  onClick={() => setInAppBannerDismissed(true)}
+                >
+                  그냥 계속하기
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="stepper">
           <div className={`step ${currentStep === 1 ? 'active' : ''} ${step1Done ? 'done' : ''}`}>
             <span className="step-dot">{step1Done ? '✓' : '1'}</span>
