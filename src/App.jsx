@@ -42,7 +42,7 @@ export default function App() {
   // Toast auto-dismiss
   useEffect(() => {
     if (toast) {
-      const t = setTimeout(() => setToast(''), 2500);
+      const t = setTimeout(() => setToast(''), 3500);
       return () => clearTimeout(t);
     }
   }, [toast]);
@@ -94,17 +94,45 @@ export default function App() {
     }
   }
 
-  function handleDownload() {
+  async function handleDownload() {
     if (!resultImage) return;
-    const link = document.createElement('a');
-    link.href = resultImage;
+
     const picketMeta = PICKETS.find(p => p.id === selectedPicket);
     const date = new Date().toISOString().slice(0, 10);
-    link.download = `온라인이슈파이팅_인증샷_${picketMeta?.id || ''}_${date}.png`;
+    const filename = `온라인이슈파이팅_인증샷_${picketMeta?.id || ''}_${date}.png`;
+
+    // iOS Safari 감지 (Web Share API 우선 사용)
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
+    if (isIOS && navigator.share) {
+      try {
+        const blob = await (await fetch(resultImage)).blob();
+        const file = new File([blob], filename, { type: 'image/png' });
+
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          setToast('사진 앱에 저장하려면 "이미지 저장"을 선택해주세요');
+          return;
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return; // 사용자가 닫음
+        // 폴백으로 진행
+      }
+    }
+
+    // 기본 다운로드 (안드로이드, PC, iOS fallback)
+    const link = document.createElement('a');
+    link.href = resultImage;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setToast('이미지를 저장했습니다');
+
+    if (isIOS) {
+      setToast('미리보기에서 공유(⤴) → "이미지 저장"으로 저장됩니다');
+    } else {
+      setToast('이미지를 저장했습니다');
+    }
   }
 
   async function handleCopyHashtag() {
