@@ -42,19 +42,23 @@ export function buildHashtagText(picketId, nominees = []) {
   });
   const mentionLine = names.map(n => `@${n}`).join(' ');
 
-  const tagLine = HASHTAGS.join(' ');
+  // 해시태그를 줄바꿈해서 한 줄에 하나씩
+  const tagBlock = HASHTAGS.join('\n');
 
-  return `서울특별시사회복지사협회 공정위원회의 온라인 이슈 파이팅 릴레이에 함께합니다.
+  return `서울특별시사회복지사협회 공정위원회 온라인 이슈 파이팅 릴레이에 함께합니다. (~6/2)
 
 시설 이름은 다를 수 있지만, 시민을 만나고 지원하는 복지업무의 가치는 다르지 않습니다.
+같은 복지업무를 했다면 경력도 공정하게 인정되어야 하고, 복리후생과 처우개선에서도 차별이 없어야 합니다.
 
-저는 오늘 아래 문구에 함께합니다.
+저는 오늘 이 문구에 이슈 파이팅에 함께합니다.
 "${picket.title}"
 
-같은 복지업무에는 공정한 경력인정이 필요합니다. 사회복지사의 안정이 시민의 복지서비스 안정으로 이어집니다.
 현장의 목소리를 함께 확산해주세요.
 
-저는 다음으로 ${mentionLine} 님을 지목합니다. 바쁘시더라도 함께해주시면 감사하겠습니다.
+저는 다음으로 ${mentionLine} 님을 지목합니다.
 
-${tagLine}`;
+바쁘시더라도 함께해주시면 감사하겠습니다.
+🛠 인증샷 만들기 : https://fair-picket.vercel.app
+
+${tagBlock}`;
 }
